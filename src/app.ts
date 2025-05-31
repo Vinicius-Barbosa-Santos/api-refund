@@ -1,14 +1,20 @@
 import cors from "cors";
-import express from "express";
+import express, { response } from "express";
 import { errorHandling } from "./middlewares/error-handling";
 import { AppError } from "./utils/AppError";
+import { z } from "zod";
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
 app.get("/", (req, res) => {
-  throw new AppError("Erro de Teste");
+  const bodySchema = z.object({
+    age: z.number().min(18),
+  });
+
+  const { age } = bodySchema.parse(req.body);
+  response.send("Hello World!");
 });
 
 app.use(errorHandling);
