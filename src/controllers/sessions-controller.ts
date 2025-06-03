@@ -1,38 +1,44 @@
-import { prisma } from "@/database/prisma";
-import { AppError } from "@/utils/AppError";
-import { compare } from "bcrypt";
 import { Request, Response } from "express";
-import * as z from "zod";
+import { AppError } from "@/utils/AppError";
+import { prisma } from "@/database/prisma";
+import { sign } from "jsonwebtoken";
+import { compare } from "bcrypt";
+import { z } from "zod";
+import { authConfig } from "@/config/auth";
 
 class SessionsController {
-  async create(req: Request, res: Response) {
+  async create(request: Request, response: Response) {
     const bodySchema = z.object({
-      email: z
-        .string()
-        .trim()
-        .email({ message: "E-mail inválido!" })
-        .toLowerCase(),
-      password: z
-        .string()
-        .trim()
-        .min(6, { message: "A senha deve ter pelo menos 6 dígitos." }),
+      email: z.string().email({ message: "E-mail inválido" }),
+      password: z.string(),
     });
 
-    const { email, password } = bodySchema.parse(req.body);
+    const { email, password } = bodySchema.parse(request.body);
 
-    const user = await prisma.user.findFirst({ where: { email } });
+    const user = await prisma.user.findFirst({
+      where: { email },
+    });
 
     if (!user) {
-      throw new AppError("E-mail ou senha incorretos!", 401);
+      throw new AppError("E-mail ou senha inválido", 401);
     }
 
-    const passwordMatch = await compare(password, user.password);
+    const passwordMatched = await compare(password, user.password);
 
-    if (!passwordMatch) {
-      throw new AppError("E-mail ou senha incorretos!", 401);
+    if (!passwordMatched) {
+      throw new AppError("E-mail ou senha inválido", 401);
     }
 
-    return res.status(200).json({ email, password });
+    const { secret, expiresIn } = authConfig.jwt;
+
+    const token = sign({ role: user.role }, secret, {
+      subject: user.id,
+      expiresIn,
+    });
+
+    const { password: _, ...userWithoutPassword } = user;
+
+    response.json({ token, user: userWithoutPassword });
   }
 }
 
