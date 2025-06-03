@@ -3,6 +3,7 @@ import { UserRole } from "@prisma/client";
 import { Request, Response } from "express";
 import { hash } from "bcrypt";
 import * as z from "zod";
+import { AppError } from "@/utils/AppError";
 
 class UsersController {
   async create(req: Request, res: Response) {
@@ -26,7 +27,7 @@ class UsersController {
     const userWithSameEmail = await prisma.user.findFirst({ where: { email } });
 
     if (userWithSameEmail) {
-      throw new Error("E-mail ja cadastrado!");
+      throw new AppError("E-mail ja cadastrado!");
     }
 
     const hashedPassword = await hash(password, 8);
