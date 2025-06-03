@@ -1,3 +1,5 @@
+import { prisma } from "@/database/prisma";
+import { AppError } from "@/utils/AppError";
 import { Request, Response } from "express";
 import * as z from "zod";
 
@@ -20,7 +22,25 @@ class RefundsController {
 
     const { name, category, amount, filename } = bodySchema.parse(req.body);
 
-    res.status(201).json({ name, category, amount, filename });
+    if (!req.user?.id) {
+      throw new AppError("Unauthorized", 401);
+    }
+
+    const refund = await prisma.refunds.create({
+      data: {
+        name,
+        category,
+        amount,
+        filename,
+        userId: req.user.id,
+      },
+    });
+
+    res.status(201).json(refund);
+  }
+
+  async index(req: Request, res: Response) {
+    res.json("OK");
   }
 }
 
